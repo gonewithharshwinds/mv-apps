@@ -1,2 +1,3 @@
-# mv-skills-management
-Manage &amp; Visualize Your Skills Data effectively.
+# mv-apps
+
+Skills Management : Manage &amp; Visualize Your Skills Data effectively.
