@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MehtaVerse Skill Organizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Urbanist', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+        .font-atkinson {
+            font-family: 'Atkinson Hyperlegible', sans-serif;
+        }
+        
+        /* --- Base Styles --- */
+        .resizer {
+            width: 4px;
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .hidden-form-field { display: none; }
+        #icon-picker {
+            position: absolute;
+            z-index: 50;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+
+        /* --- Dark Theme (Default) --- */
+        .theme-dark {
+            background-color: #0c132a;
+            color: #e5e7eb;
+        }
+        .theme-dark .header, .theme-dark .left-pane, .theme-dark .right-pane { background-color: #111827; border-color: #374151; }
+        .theme-dark .center-pane-header { background-color: #0c132a; border-color: #374151; }
+        .theme-dark .card { background-color: rgba(31, 41, 55, 0.5); border: 1px solid #374151; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: all 0.2s ease-in-out; }
+        .theme-dark .card:hover { border-color: #4f46e5; transform: translateY(-2px); }
+        .theme-dark .card.highlight { border-color: #818cf8; transform: translateY(-2px); box-shadow: 0 0 15px rgba(129, 140, 248, 0.3); }
+        .theme-dark .resizer { background-color: #2d3748; }
+        .theme-dark .resizer:hover { background-color: #4f46e5; }
+        .theme-dark .workspace-item.active { background-color: #4f46e5; }
+        .theme-dark .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .theme-dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 3px;}
+        .theme-dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #718096; }
+        .theme-dark input, .theme-dark select, .theme-dark textarea { background-color: #374151; border-color: #4b5563; color: #e5e7eb; }
+        .theme-dark .d3-grid-lines { stroke: #4b5563; }
+        .theme-dark .d3-text { fill: #e5e7eb; }
+        .theme-dark button { transition: all 0.2s ease-in-out; }
+        .theme-dark button:active { transform: scale(0.97); }
+
+        /* --- Light Theme --- */
+        .theme-light {
+            background-color: #f3f4f6;
+            color: #111827;
+        }
+        .theme-light .header, .theme-light .left-pane, .theme-light .right-pane { background-color: #ffffff; border-color: #e5e7eb; }
+        .theme-light .center-pane-header { background-color: #f3f4f6; border-color: #e5e7eb; }
+        .theme-light .card { background-color: #ffffff; border: 1px solid #e5e7eb; transition: all 0.2s ease-in-out; }
+        .theme-light .card:hover { border-color: #4f46e5; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .theme-light .card.highlight { border-color: #818cf8; transform: translateY(-2px); box-shadow: 0 0 15px rgba(129, 140, 248, 0.3); }
+        .theme-light .resizer { background-color: #d1d5db; }
+        .theme-light .resizer:hover { background-color: #4f46e5; }
+        .theme-light .workspace-item.active { background-color: #4f46e5; color: #ffffff; }
+        .theme-light .custom-scrollbar::-webkit-scrollbar-track { background: #e5e7eb; }
+        .theme-light .custom-scrollbar::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 3px;}
+        .theme-light .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .theme-light input, .theme-light select, .theme-light textarea { background-color: #f9fafb; border-color: #d1d5db; color: #111827; }
+        .theme-light .d3-grid-lines { stroke: #d1d5db; }
+        .theme-light .d3-text { fill: #111827; }
+        .theme-light button { transition: all 0.2s ease-in-out; }
+        .theme-light button:active { transform: scale(0.97); }
+
+        /* --- Neomorphism Theme --- */
+        .theme-neomorphism {
+            background-color: #e0e5ec;
+            color: #5a6677;
+        }
+        .theme-neomorphism .header, .theme-neomorphism .left-pane, .theme-neomorphism .right-pane, .theme-neomorphism .center-pane-header { background-color: #e0e5ec; border-color: transparent; }
+        .theme-neomorphism .card {
+            background-color: #e0e5ec;
+            border-radius: 20px;
+            border: none;
+            box-shadow: 9px 9px 16px #a3b1c6, -9px -9px 16px #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+        .theme-neomorphism .card:hover { box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff; }
+        .theme-neomorphism .card.highlight { box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff; }
+        .theme-neomorphism .resizer { background-color: #a3b1c6; }
+        .theme-neomorphism .resizer:hover { background-color: #4f46e5; }
+        .theme-neomorphism .workspace-item.active { background-color: #4f46e5; color: #ffffff; box-shadow: inset 5px 5px 10px #3c35b2, inset -5px -5px 10px #6257ff; }
+        .theme-neomorphism .custom-scrollbar::-webkit-scrollbar-track { background: #e0e5ec; }
+        .theme-neomorphism .custom-scrollbar::-webkit-scrollbar-thumb { background: #a3b1c6; border-radius: 3px;}
+        .theme-neomorphism .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #8291a8; }
+        .theme-neomorphism input, .theme-neomorphism select, .theme-neomorphism textarea {
+            background-color: #e0e5ec;
+            border: 1px solid transparent;
+            color: #5a6677;
+            border-radius: 10px;
+            box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff;
+        }
+        .theme-neomorphism .d3-grid-lines { stroke: #a3b1c6; }
+        .theme-neomorphism .d3-text { fill: #5a6677; }
+        .theme-neomorphism .btn-primary { box-shadow: 5px 5px 10px #a3b1c6, -5px -5px 10px #ffffff; }
+        .theme-neomorphism button { transition: all 0.2s ease-in-out; }
+        .theme-neomorphism button:active { box-shadow: inset 5px 5px 10px #a3b1c6, inset -5px -5px 10px #ffffff; }
+
+        /* Modal Animation */
+        .modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .modal.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="header text-center p-4 border-b flex-shrink-0 flex justify-between items-center">
+        <div class="w-1/3"></div>
+        <h1 class="text-2xl font-bold font-atkinson w-1/3">MehtaVerse Skill Organizer</h1>
+        <div class="w-1/3 flex justify-end">
+            <button id="settings-btn" class="px-4 py-2 rounded-md hover:bg-gray-700 transition">
+                <i class="fas fa-cog text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <div id="main-container" class="flex-grow flex overflow-hidden">
+        <!-- Left Pane: Workspace Explorer -->
+        <div id="left-pane" class="left-pane flex flex-col flex-shrink-0" style="width: 20%; min-width: 200px;">
+            <div class="p-4 border-b">
+                <h2 class="text-lg font-bold">Workspace Explorer</h2>
+                <button id="new-workspace-btn" class="w-full mt-2 bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-500 transition text-sm flex items-center justify-center gap-2 btn-primary">
+                    <i class="fas fa-plus"></i> New Workspace
+                </button>
+            </div>
+            <div id="workspace-tree" class="flex-grow overflow-y-auto p-2 custom-scrollbar"></div>
+        </div>
+
+        <div class="resizer" id="resizer-left"></div>
+
+        <!-- Center Pane: Visualization & Details -->
+        <div id="center-pane" class="flex-grow flex flex-col overflow-y-auto custom-scrollbar">
+            <!-- Top Fixed Bar -->
+            <div class="center-pane-header sticky top-0 z-10 backdrop-blur-sm p-4 flex justify-between items-center border-b">
+                <div id="title-container" class="flex items-center gap-2">
+                    <h2 id="visualization-title" class="text-xl font-bold font-atkinson cursor-pointer">Skill Matrix</h2>
+                    <input type="text" id="title-edit-input" class="hidden px-2 py-1 rounded-md text-xl font-bold font-atkinson">
+                    <button id="title-save-btn" class="hidden bg-green-600 text-white p-2 rounded-md hover:bg-green-500 btn-primary">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+                <div>
+                    <button id="export-btn" class="bg-green-600 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-500 transition text-sm inline-flex items-center gap-2 btn-primary"><i class="fas fa-file-export"></i> Export</button>
+                    <button id="delete-workspace-btn" class="bg-red-600 text-white font-semibold py-1 px-3 rounded-md hover:bg-red-500 transition text-sm ml-2 inline-flex items-center gap-2 btn-primary"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+            </div>
+            
+            <div id="infographic-export-area" class="p-4 md:p-8">
+                <div class="flex-grow flex flex-col bg-transparent border-none">
+                    <div id="visualization-container" class="w-full h-[500px] md:h-[600px] relative">
+                        <svg id="skill-svg" class="w-full h-full"></svg>
+                    </div>
+                </div>
+                <div id="skill-details-grid" class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                </div>
+            </div>
+        </div>
+
+        <div class="resizer" id="resizer-right"></div>
+
+        <!-- Right Pane: Management -->
+        <div id="right-pane" class="right-pane flex flex-col flex-shrink-0" style="width: 20%; min-width: 250px;">
+            <div class="flex-grow p-4 overflow-y-auto custom-scrollbar">
+                 <div id="management-panel" class="relative">
+                    <!-- Add/Edit Skill Form -->
+                    <div>
+                        <h2 id="form-title" class="text-lg font-bold mb-3">Add/Edit Skill</h2>
+                        <form id="skill-form">
+                            <input type="hidden" id="skill-id">
+                            <div class="grid grid-cols-1 gap-3">
+                                <input type="text" id="skill-name" class="w-full px-3 py-2 border text-sm rounded-md" placeholder="Skill Name" required>
+                                <input type="text" id="skill-icon" class="w-full px-3 py-2 border text-sm rounded-md" placeholder="Click to choose icon">
+                                
+                                <select id="skill-category" class="w-full px-3 py-2 border text-sm rounded-md"></select>
+                                
+                                <div id="new-category-container" class="hidden-form-field grid grid-cols-1 gap-2">
+                                    <input type="text" id="new-category-name" class="w-full px-3 py-2 border text-sm rounded-md" placeholder="New Category Name">
+                                </div>
+
+                                <input type="text" id="skill-attribution" class="w-full px-3 py-2 border text-sm rounded-md" placeholder="Attribution (e.g., Coursera)">
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Date Acquired</label>
+                                    <input type="date" id="skill-date" class="w-full px-3 py-2 border text-sm rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Experience (years)</label>
+                                    <input type="number" id="skill-experience" class="w-full px-3 py-2 border text-sm rounded-md" placeholder="e.g., 3" min="0" step="0.5">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Proficiency: <span id="proficiency-value">3</span></label>
+                                    <input type="range" id="skill-proficiency" min="1" max="5" value="3" class="w-full">
+                                </div>
+                                
+                                <div class="border-t pt-3">
+                                    <label class="flex items-center gap-2 text-xs font-medium">
+                                        <input type="checkbox" id="enable-target-proficiency" class="rounded-sm">
+                                        Enable Target Proficiency
+                                    </label>
+                                    <div id="target-proficiency-container" class="hidden-form-field mt-2">
+                                        <label class="block text-xs font-medium mb-1">Target: <span id="target-proficiency-value">4</span></label>
+                                        <input type="range" id="target-proficiency" min="1" max="5" value="4" class="w-full">
+                                    </div>
+                                </div>
+
+                                <textarea id="skill-notes" rows="3" class="w-full px-3 py-2 border text-sm rounded-md" placeholder="Notes & Experience..."></textarea>
+                            </div>
+                            <div class="flex gap-2 mt-4">
+                                <button type="submit" id="submit-button" class="flex-grow bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md flex items-center justify-center gap-2 btn-primary"><i class="fas fa-plus"></i> Add Skill</button>
+                                <button type="button" id="cancel-button" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-md hidden btn-primary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <!-- Icon Picker -->
+                    <div id="icon-picker" class="hidden-form-field card mt-1 w-full p-2">
+                        <input type="text" id="icon-search" class="w-full px-2 py-1 text-xs mb-2 rounded-md" placeholder="Search icons...">
+                        <div id="icon-list" class="grid grid-cols-6 gap-2 text-center text-lg">
+                            <!-- Icons will be populated by JS -->
+                        </div>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="theme-modal" class="modal fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="card p-6 relative w-full max-w-lg mx-4 rounded-lg">
+            <h2 class="text-xl font-bold mb-4 font-atkinson">Choose a Theme</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button data-theme="theme-dark" class="theme-btn border-2 border-indigo-500 p-4 rounded-lg text-center">
+                    <div class="w-full h-24 bg-gray-900 rounded-md mb-2"></div>
+                    <h3 class="font-bold">Dark</h3>
+                </button>
+                <button data-theme="theme-light" class="theme-btn border-2 border-transparent p-4 rounded-lg text-center">
+                    <div class="w-full h-24 bg-gray-200 rounded-md mb-2"></div>
+                    <h3 class="font-bold">Light</h3>
+                </button>
+                <button data-theme="theme-neomorphism" class="theme-btn border-2 border-transparent p-4 rounded-lg text-center">
+                    <div class="w-full h-24 bg-[#e0e5ec] rounded-md mb-2"></div>
+                    <h3 class="font-bold">Neomorphism</h3>
+                </button>
+            </div>
+             <div class="flex justify-end mt-6">
+                <button type="button" class="modal-cancel-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-md btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+    <div id="export-modal" class="modal fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="card p-6 relative w-full max-w-4xl mx-4 rounded-lg">
+            <h2 class="text-xl font-bold mb-4 font-atkinson">Export Options</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Portrait Preview -->
+                <div>
+                    <h3 class="font-bold text-center mb-2">Portrait Layout (A4)</h3>
+                    <div id="portrait-preview-container" class="border p-2 aspect-[8.5/11] rounded-md">
+                        <!-- JS will render preview here -->
+                    </div>
+                    <button id="download-portrait-btn" class="w-full mt-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-500 transition text-sm flex items-center justify-center gap-2 btn-primary">
+                        <i class="fas fa-download"></i> Download Portrait
+                    </button>
+                </div>
+                <!-- Landscape Preview -->
+                <div>
+                    <h3 class="font-bold text-center mb-2">Landscape Layout (A4)</h3>
+                    <div id="landscape-preview-container" class="border p-2 aspect-[11/8.5] rounded-md">
+                        <!-- JS will render preview here -->
+                    </div>
+                    <button id="download-landscape-btn" class="w-full mt-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-500 transition text-sm flex items-center justify-center gap-2 btn-primary">
+                        <i class="fas fa-download"></i> Download Landscape
+                    </button>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button type="button" class="modal-cancel-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-md btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="workspace-modal" class="modal fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="card p-6 relative w-full max-w-md mx-4 rounded-lg">
+            <h2 class="text-xl font-bold mb-4 font-atkinson">Create New Workspace</h2>
+            <form id="workspace-form">
+                <input type="text" id="workspace-name" class="w-full px-3 py-2 border mb-4 rounded-md" required placeholder="Workspace Name">
+                <input type="text" id="workspace-folder" class="w-full px-3 py-2 border rounded-md" placeholder="Folder (Optional)">
+                <div class="flex justify-end gap-4 mt-6">
+                    <button type="button" class="modal-cancel-btn bg-gray-600 text-white font-semibold py-2 px-4 rounded-md btn-primary">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="delete-confirm-modal" class="modal fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="card p-6 relative w-full max-w-md mx-4 rounded-lg">
+            <h2 class="text-xl font-bold mb-2 font-atkinson">Confirm Deletion</h2>
+            <p id="delete-confirm-text" class="mb-6">Are you sure?</p>
+            <div class="flex justify-end gap-4">
+                <button type="button" id="delete-cancel-btn" class="bg-gray-600 text-white font-semibold py-2 px-4 rounded-md btn-primary">Cancel</button>
+                <button type="button" id="delete-confirm-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-md btn-primary">Delete</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DATA MANAGEMENT ---
+        const STORAGE_KEY = 'skillOrganizerData_v16';
+        let appData = {
+            workspaces: [],
+            activeWorkspaceId: null,
+            theme: 'theme-dark'
+        };
+        
+        const defaultCategories = [
+            { id: 1, name: 'Design', color: '#60a5fa' },
+            { id: 2, name: 'Technical', color: '#4ade80' },
+            { id: 3, name: 'Strategy', color: '#f472b6' },
+            { id: 4, "name": "Communication", "color": "#fb923c" },
+            { id: 0, name: 'Uncategorized', color: '#9ca3af' },
+        ];
+
+        const defaultSkills = [
+            { id: 1, name: 'UI Design', icon: 'fas fa-palette', categoryId: 1, proficiency: 4, experience: 3, dateAcquired: '2022-01-15', notes: 'Experienced with Figma and component-based design systems.', attribution: 'Work Projects', targetEnabled: true, targetProficiency: 5 },
+            { id: 2, name: 'Prototyping', icon: 'fab fa-figma', categoryId: 1, proficiency: 5, experience: 3, dateAcquired: '2022-03-20', notes: 'High-fidelity prototypes for user testing.', attribution: 'Figma', targetEnabled: false, targetProficiency: 5 },
+            { id: 3, name: 'JavaScript', icon: 'fab fa-js-square', categoryId: 2, proficiency: 4, experience: 5, dateAcquired: '2020-06-01', notes: 'ES6+, React, and Node.js proficiency.', attribution: 'Coursera', targetEnabled: false, targetProficiency: 5 },
+            { id: 4, name: 'D3.js', icon: 'fas fa-chart-pie', categoryId: 2, proficiency: 3, experience: 2, dateAcquired: '2023-05-10', notes: 'Building interactive data visualizations.', attribution: 'Personal Projects', targetEnabled: true, targetProficiency: 4 },
+            { id: 5, name: 'Product Strategy', icon: 'fas fa-lightbulb', categoryId: 3, proficiency: 3, experience: 1.5, dateAcquired: '2023-11-01', notes: 'Roadmapping and feature prioritization.', attribution: 'Udemy', targetEnabled: false, targetProficiency: 4 },
+        ];
+        
+        const iconList = ['fas fa-code', 'fab fa-figma', 'fas fa-palette', 'fab fa-js-square', 'fas fa-chart-pie', 'fas fa-lightbulb', 'fas fa-database', 'fab fa-react', 'fab fa-vuejs', 'fab fa-angular', 'fab fa-node-js', 'fab fa-python', 'fas fa-users', 'fas fa-comments', 'fas fa-brain', 'fas fa-search', 'fas fa-sitemap', 'fas fa-mobile-alt', 'fas fa-server', 'fas fa-cogs', 'fas fa-tasks', 'fas fa-bullhorn', 'fas fa-pen-ruler'];
+
+
+        // --- DOM ELEMENTS ---
+        const dom = {
+            // Panes and Resizers
+            leftPane: document.getElementById('left-pane'),
+            centerPane: document.getElementById('center-pane'),
+            rightPane: document.getElementById('right-pane'),
+            resizerLeft: document.getElementById('resizer-left'),
+            resizerRight: document.getElementById('resizer-right'),
+            managementPanel: document.getElementById('management-panel'),
+            // Workspace
+            workspaceTree: document.getElementById('workspace-tree'),
+            newWorkspaceBtn: document.getElementById('new-workspace-btn'),
+            deleteWorkspaceBtn: document.getElementById('delete-workspace-btn'),
+            // Title
+            visualizationTitle: document.getElementById('visualization-title'),
+            titleEditInput: document.getElementById('title-edit-input'),
+            titleSaveBtn: document.getElementById('title-save-btn'),
+            // Skill Form
+            skillForm: document.getElementById('skill-form'),
+            skillIdInput: document.getElementById('skill-id'),
+            skillNameInput: document.getElementById('skill-name'),
+            skillIconInput: document.getElementById('skill-icon'),
+            skillCategorySelect: document.getElementById('skill-category'),
+            newCategoryContainer: document.getElementById('new-category-container'),
+            newCategoryNameInput: document.getElementById('new-category-name'),
+            skillAttributionInput: document.getElementById('skill-attribution'),
+            skillDateInput: document.getElementById('skill-date'),
+            skillExperienceInput: document.getElementById('skill-experience'),
+            skillProficiencyInput: document.getElementById('skill-proficiency'),
+            proficiencyValue: document.getElementById('proficiency-value'),
+            enableTargetProficiency: document.getElementById('enable-target-proficiency'),
+            targetProficiencyContainer: document.getElementById('target-proficiency-container'),
+            targetProficiencyInput: document.getElementById('target-proficiency'),
+            targetProficiencyValue: document.getElementById('target-proficiency-value'),
+            skillNotesInput: document.getElementById('skill-notes'),
+            formTitle: document.getElementById('form-title'),
+            submitButton: document.getElementById('submit-button'),
+            cancelButton: document.getElementById('cancel-button'),
+            iconPicker: document.getElementById('icon-picker'),
+            iconSearch: document.getElementById('icon-search'),
+            iconList: document.getElementById('icon-list'),
+            // Details Grid
+            skillDetailsGrid: document.getElementById('skill-details-grid'),
+            // Modals
+            workspaceModal: document.getElementById('workspace-modal'),
+            workspaceForm: document.getElementById('workspace-form'),
+            workspaceNameInput: document.getElementById('workspace-name'),
+            workspaceFolderInput: document.getElementById('workspace-folder'),
+            deleteConfirmModal: document.getElementById('delete-confirm-modal'),
+            deleteConfirmText: document.getElementById('delete-confirm-text'),
+            deleteCancelBtn: document.getElementById('delete-cancel-btn'),
+            deleteConfirmBtn: document.getElementById('delete-confirm-btn'),
+            // Export
+            exportBtn: document.getElementById('export-btn'),
+            exportModal: document.getElementById('export-modal'),
+            portraitPreviewContainer: document.getElementById('portrait-preview-container'),
+            landscapePreviewContainer: document.getElementById('landscape-preview-container'),
+            downloadPortraitBtn: document.getElementById('download-portrait-btn'),
+            downloadLandscapeBtn: document.getElementById('download-landscape-btn'),
+            // Theme
+            settingsBtn: document.getElementById('settings-btn'),
+            themeModal: document.getElementById('theme-modal'),
+        };
+        
+        // --- THEME MANAGEMENT ---
+        function applyTheme(theme) {
+            document.body.className = 'h-screen flex flex-col'; // Reset classes
+            document.body.classList.add(theme);
+            appData.theme = theme;
+            saveData();
+            
+            // Update theme button highlights
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                if (btn.dataset.theme === theme) {
+                    btn.classList.add('border-indigo-500');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove('border-indigo-500');
+                    btn.classList.add('border-transparent');
+                }
+            });
+             fullUIUpdate(); // Re-render chart with new theme colors
+        }
+
+        // --- CORE FUNCTIONS ---
+        function loadData() {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) {
+                appData = JSON.parse(savedData);
+            } else {
+                const defaultWorkspace = { id: Date.now(), name: 'My First Workspace', folder: 'General', skills: defaultSkills, categories: defaultCategories };
+                appData.workspaces.push(defaultWorkspace);
+                appData.activeWorkspaceId = defaultWorkspace.id;
+            }
+            applyTheme(appData.theme || 'theme-dark');
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        }
+
+        function getActiveWorkspace() {
+            return appData.workspaces.find(ws => ws.id === appData.activeWorkspaceId) || null;
+        }
+
+        function fullUIUpdate() {
+            saveData();
+            renderWorkspaceTree();
+            const activeWs = getActiveWorkspace();
+            if (activeWs) {
+                dom.visualizationTitle.textContent = activeWs.name;
+                updateVisualization(activeWs);
+                renderSkillDetails(activeWs);
+                populateSkillFormCategories(activeWs);
+            } else {
+                dom.visualizationTitle.textContent = 'No Workspace Selected';
+                d3.select("#skill-svg").selectAll("*").remove();
+                dom.skillDetailsGrid.innerHTML = '';
+            }
+        }
+
+        // --- WORKSPACE MANAGEMENT ---
+        function renderWorkspaceTree() {
+            dom.workspaceTree.innerHTML = '';
+            const groupedByFolder = d3.group(appData.workspaces, d => d.folder || 'Uncategorized');
+            
+            groupedByFolder.forEach((workspaces, folder) => {
+                const folderContainer = document.createElement('div');
+                folderContainer.className = 'mb-2';
+                folderContainer.innerHTML = `<h3 class="text-xs font-bold uppercase text-gray-500 px-2 flex items-center gap-2"><i class="fas fa-folder"></i> ${folder}</h3>`;
+                const ul = document.createElement('ul');
+                ul.className = 'space-y-1 mt-1';
+                
+                workspaces.forEach(ws => {
+                    const li = document.createElement('li');
+                    li.className = `workspace-item text-sm px-2 py-1 cursor-pointer hover:bg-gray-700 flex items-center gap-2 rounded-md`;
+                    li.innerHTML = `<i class="fas fa-file-alt fa-fw"></i> <span>${ws.name}</span>`;
+                    if (ws.id === appData.activeWorkspaceId) {
+                        li.classList.add('active');
+                    }
+                    li.dataset.id = ws.id;
+                    ul.appendChild(li);
+                });
+                folderContainer.appendChild(ul);
+                dom.workspaceTree.appendChild(folderContainer);
+            });
+        }
+        
+        function handleDeleteWorkspace() {
+            const activeWs = getActiveWorkspace();
+            if (!activeWs) return;
+
+            dom.deleteConfirmText.textContent = `Are you sure you want to delete the "${activeWs.name}" workspace? This action cannot be undone.`;
+            toggleModal(dom.deleteConfirmModal, true);
+            
+            dom.deleteConfirmBtn.onclick = () => {
+                appData.workspaces = appData.workspaces.filter(ws => ws.id !== appData.activeWorkspaceId);
+                appData.activeWorkspaceId = appData.workspaces.length > 0 ? appData.workspaces[0].id : null;
+                toggleModal(dom.deleteConfirmModal, false);
+                fullUIUpdate();
+            };
+        }
+
+        function handleTitleEdit() {
+            const activeWs = getActiveWorkspace();
+            if (!activeWs) return;
+
+            dom.visualizationTitle.classList.add('hidden');
+            dom.titleEditInput.classList.remove('hidden');
+            dom.titleSaveBtn.classList.remove('hidden');
+            dom.titleEditInput.value = activeWs.name;
+            dom.titleEditInput.focus();
+        }
+
+        function saveTitleEdit() {
+            const activeWs = getActiveWorkspace();
+            if (!activeWs) return;
+
+            const newName = dom.titleEditInput.value.trim();
+            if (newName) {
+                activeWs.name = newName;
+            }
+
+            dom.visualizationTitle.classList.remove('hidden');
+            dom.titleEditInput.classList.add('hidden');
+            dom.titleSaveBtn.classList.add('hidden');
+            fullUIUpdate();
+        }
+
+        // --- D3 RADIAL VISUALIZATION ---
+        function renderChartToSVG(svg, workspace, width, height) {
+            svg.selectAll("*").remove();
+            
+            const margin = 40;
+            const radius = Math.min(width, height) / 2 - margin;
+
+            const g = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
+
+            if (!workspace.skills || workspace.skills.length === 0) {
+                 g.append("text").attr("text-anchor", "middle").attr("dy", "0.35em").attr("class", "d3-text font-atkinson").text("Add skills to begin");
+                return;
+            }
+
+            const categoryMap = new Map(workspace.categories.map(c => [c.id, c]));
+            const skillsWithCategory = workspace.skills.map(skill => ({...skill, category: categoryMap.get(skill.categoryId)}));
+
+            const x = d3.scaleBand()
+                .range([0, 2 * Math.PI])
+                .align(0)
+                .domain(skillsWithCategory.map(d => d.name));
+            
+            const y = d3.scaleLinear()
+                .range([radius * 0.2, radius])
+                .domain([0, 5]);
+
+            g.selectAll("circle.grid")
+                .data(y.ticks(5).slice(1))
+                .join("circle")
+                .attr("class", "grid d3-grid-lines")
+                .attr("r", y)
+                .style("fill", "none")
+                .style("stroke-dasharray", "2,2");
+
+            const arc = d3.arc()
+                .innerRadius(radius * 0.2)
+                .outerRadius(d => y(d.proficiency))
+                .startAngle(d => x(d.name))
+                .endAngle(d => x(d.name) + x.bandwidth())
+                .padAngle(0.02)
+                .padRadius(radius * 0.2);
+
+            const targetArc = d3.arc()
+                .innerRadius(d => y(d.targetProficiency) - 1)
+                .outerRadius(d => y(d.targetProficiency) + 1)
+                .startAngle(d => x(d.name))
+                .endAngle(d => x(d.name) + x.bandwidth())
+                .padAngle(0.02)
+                .padRadius(radius * 0.2);
+
+            g.selectAll("path.skill-arc")
+                .data(skillsWithCategory)
+                .join("path")
+                .attr("class", "skill-arc")
+                .attr("d", arc)
+                .style("fill", d => d.category.color)
+                .style("fill-opacity", 0.7)
+                .style("stroke", d => d.category.color)
+                .style("stroke-width", 2)
+                .attr("cursor", "pointer")
+                .on("click", (event, d) => handleEditSkill(d.id));
+
+            g.selectAll("path.target-arc")
+                .data(skillsWithCategory.filter(d => d.targetEnabled))
+                .join("path")
+                .attr("class", "target-arc")
+                .attr("d", targetArc)
+                .style("fill", "none")
+                .style("stroke", d => d.category.color)
+                .style("stroke-width", 2)
+                .style("stroke-dasharray", "4, 4");
+
+
+            g.selectAll("text.skill-label")
+                .data(skillsWithCategory)
+                .join("text")
+                .attr("class", "skill-label d3-text")
+                .attr("dy", "-0.4em")
+                .attr("text-anchor", "middle")
+                .attr("transform", d => `rotate(${(x(d.name) + x.bandwidth() / 2) * 180 / Math.PI - 90}) translate(${y(d.proficiency) + 18},0)`)
+                .style("font-size", "10px")
+                .text(d => d.name);
+            
+            g.append("text").attr("text-anchor", "middle").attr("dy", "0.35em").attr("class", "d3-text font-atkinson text-2xl font-bold").text("Skills Matrix");
+        }
+
+        function updateVisualization(workspace) {
+            const container = document.getElementById('visualization-container');
+            const svg = d3.select("#skill-svg");
+            renderChartToSVG(svg, workspace, container.clientWidth, container.clientHeight);
+        }
+        
+        // --- SKILL DETAILS & MANAGEMENT ---
+        function renderSkillDetails(workspace) {
+            dom.skillDetailsGrid.innerHTML = '';
+            if (!workspace.skills || workspace.skills.length === 0) return;
+
+            workspace.skills.forEach(skill => {
+                const category = workspace.categories.find(c => c.id === skill.categoryId) || { name: 'N/A' };
+                const el = document.createElement('div');
+                el.className = 'card p-4 flex flex-col justify-between rounded-lg';
+                el.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold font-atkinson">${skill.name}</h3>
+                                <p class="text-xs font-semibold" style="color: ${category.color};">${category.name}</p>
+                            </div>
+                            <i class="${skill.icon || 'fas fa-question-circle'} text-gray-500 text-xl"></i>
+                        </div>
+                        <div class="flex justify-between items-baseline mt-2">
+                             <p class="text-xs text-gray-400">${skill.attribution || 'No attribution'}</p>
+                             <span class="text-xs text-gray-400">${skill.experience || 0} yrs</span>
+                        </div>
+                        <p class="text-sm mt-2">${skill.notes || 'No notes.'}</p>
+                    </div>
+                    <div class="flex justify-end mt-4 gap-2 action-buttons">
+                        <button data-id="${skill.id}" class="edit-skill-btn text-xs bg-gray-600 hover:bg-gray-500 text-white py-1 px-2 rounded-md flex items-center gap-1"><i class="fas fa-edit"></i> Edit</button>
+                        <button data-id="${skill.id}" class="delete-skill-btn text-xs bg-red-800 hover:bg-red-700 text-white py-1 px-2 rounded-md flex items-center gap-1"><i class="fas fa-trash"></i> Delete</button>
+                    </div>
+                `;
+                dom.skillDetailsGrid.appendChild(el);
+            });
+        }
+        
+        function populateSkillFormCategories(workspace) {
+            dom.skillCategorySelect.innerHTML = '';
+            workspace.categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                dom.skillCategorySelect.appendChild(option);
+            });
+            const addNewOption = document.createElement('option');
+            addNewOption.value = 'add-new';
+            addNewOption.textContent = 'Add New Category...';
+            dom.skillCategorySelect.appendChild(addNewOption);
+        }
+
+        function handleEditSkill(skillId) {
+            const activeWs = getActiveWorkspace();
+            if (!activeWs) return;
+            const skill = activeWs.skills.find(s => s.id == skillId);
+            if (skill) {
+                dom.formTitle.textContent = 'Edit Skill';
+                dom.skillIdInput.value = skill.id;
+                dom.skillNameInput.value = skill.name;
+                dom.skillIconInput.value = skill.icon || '';
+                dom.skillCategorySelect.value = skill.categoryId;
+                dom.skillAttributionInput.value = skill.attribution || '';
+                dom.skillDateInput.value = skill.dateAcquired || '';
+                dom.skillExperienceInput.value = skill.experience || 0;
+                dom.skillProficiencyInput.value = skill.proficiency;
+                dom.proficiencyValue.textContent = skill.proficiency;
+                dom.skillNotesInput.value = skill.notes || '';
+                dom.enableTargetProficiency.checked = skill.targetEnabled || false;
+                dom.targetProficiencyContainer.style.display = skill.targetEnabled ? 'block' : 'none';
+                dom.targetProficiencyInput.value = skill.targetProficiency || 4;
+                dom.targetProficiencyValue.textContent = skill.targetProficiency || 4;
+                dom.submitButton.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+                dom.cancelButton.classList.remove('hidden');
+            }
+        }
+        
+        function handleDeleteSkill(skillId) {
+            const activeWs = getActiveWorkspace();
+            if (!activeWs) return;
+            const skill = activeWs.skills.find(s => s.id == skillId);
+            if(skill) {
+                dom.deleteConfirmText.textContent = `Are you sure you want to delete the skill "${skill.name}"?`;
+                toggleModal(dom.deleteConfirmModal, true);
+                
+                dom.deleteConfirmBtn.onclick = () => {
+                    activeWs.skills = activeWs.skills.filter(s => s.id !== skill.id);
+                    toggleModal(dom.deleteConfirmModal, false);
+                    fullUIUpdate();
+                };
+            }
+        }
+
+        // --- EVENT LISTENERS & OTHER LOGIC ---
+        dom.skillForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const activeWs = getActiveWorkspace();
+            if (!activeWs) return;
+            
+            let categoryId = parseInt(dom.skillCategorySelect.value, 10);
+            if (dom.skillCategorySelect.value === 'add-new') {
+                const newCategoryName = dom.newCategoryNameInput.value.trim();
+                if (newCategoryName) {
+                    const newCategory = { id: Date.now(), name: newCategoryName, color: '#888888' }; // Default color
+                    activeWs.categories.push(newCategory);
+                    categoryId = newCategory.id;
+                } else {
+                    categoryId = 0; // Default to uncategorized if name is empty
+                }
+            }
+
+            const skillData = {
+                name: dom.skillNameInput.value.trim(),
+                icon: dom.skillIconInput.value.trim(),
+                categoryId: categoryId,
+                proficiency: parseInt(dom.skillProficiencyInput.value, 10),
+                experience: parseFloat(dom.skillExperienceInput.value) || 0,
+                attribution: dom.skillAttributionInput.value.trim(),
+                dateAcquired: dom.skillDateInput.value,
+                notes: dom.skillNotesInput.value.trim(),
+                targetEnabled: dom.enableTargetProficiency.checked,
+                targetProficiency: parseInt(dom.targetProficiencyInput.value, 10)
+            };
+            const id = dom.skillIdInput.value;
+            if (id) {
+                const index = activeWs.skills.findIndex(s => s.id == id);
+                if (index > -1) activeWs.skills[index] = { ...activeWs.skills[index], ...skillData };
+            } else {
+                 const newId = activeWs.skills.length > 0 ? Math.max(...activeWs.skills.map(s => s.id)) + 1 : 1;
+                activeWs.skills.push({ id: newId, ...skillData });
+            }
+            fullUIUpdate();
+            dom.skillForm.reset();
+            dom.skillIdInput.value = '';
+            dom.proficiencyValue.textContent = '3';
+            dom.targetProficiencyValue.textContent = '4';
+            dom.cancelButton.classList.add('hidden');
+            dom.formTitle.textContent = 'Add/Edit Skill';
+            dom.submitButton.innerHTML = '<i class="fas fa-plus"></i> Add Skill';
+            dom.newCategoryContainer.style.display = 'none';
+        });
+
+        dom.cancelButton.addEventListener('click', () => {
+            dom.skillForm.reset();
+            dom.skillIdInput.value = '';
+            dom.proficiencyValue.textContent = '3';
+            dom.targetProficiencyValue.textContent = '4';
+            dom.cancelButton.classList.add('hidden');
+            dom.formTitle.textContent = 'Add/Edit Skill';
+            dom.submitButton.innerHTML = '<i class="fas fa-plus"></i> Add Skill';
+            dom.newCategoryContainer.style.display = 'none';
+        });
+
+        dom.skillProficiencyInput.addEventListener('input', (e) => {
+            dom.proficiencyValue.textContent = e.target.value;
+        });
+        
+        dom.targetProficiencyInput.addEventListener('input', (e) => {
+            dom.targetProficiencyValue.textContent = e.target.value;
+        });
+
+        dom.enableTargetProficiency.addEventListener('change', (e) => {
+            dom.targetProficiencyContainer.style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        dom.skillCategorySelect.addEventListener('change', (e) => {
+            dom.newCategoryContainer.style.display = e.target.value === 'add-new' ? 'grid' : 'none';
+        });
+        
+        function toggleModal(modal, show) {
+            if (show) {
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0', 'scale-95'), 10);
+            } else {
+                modal.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        }
+
+        document.querySelectorAll('.modal-cancel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                toggleModal(btn.closest('.modal'), false);
+            });
+        });
+        
+        dom.skillDetailsGrid.addEventListener('click', (e) => {
+            if (e.target.closest('.edit-skill-btn')) {
+                handleEditSkill(Number(e.target.closest('.edit-skill-btn').dataset.id));
+            }
+            if (e.target.closest('.delete-skill-btn')) {
+                handleDeleteSkill(Number(e.target.closest('.delete-skill-btn').dataset.id));
+            }
+        });
+
+        dom.visualizationTitle.addEventListener('click', handleTitleEdit);
+        dom.titleSaveBtn.addEventListener('click', saveTitleEdit);
+        dom.titleEditInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveTitleEdit();
+        });
+        dom.titleEditInput.addEventListener('blur', saveTitleEdit);
+
+        dom.workspaceTree.addEventListener('click', (e) => {
+            if (e.target.closest('.workspace-item')) {
+                appData.activeWorkspaceId = Number(e.target.closest('.workspace-item').dataset.id);
+                fullUIUpdate();
+            }
+        });
+        dom.newWorkspaceBtn.addEventListener('click', () => { toggleModal(dom.workspaceModal, true); });
+        dom.workspaceForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newWorkspace = { id: Date.now(), name: dom.workspaceNameInput.value.trim(), folder: dom.workspaceFolderInput.value.trim() || 'General', skills: [], categories: JSON.parse(JSON.stringify(defaultCategories)) };
+            appData.workspaces.push(newWorkspace);
+            appData.activeWorkspaceId = newWorkspace.id;
+            toggleModal(dom.workspaceModal, false);
+            fullUIUpdate();
+        });
+        dom.deleteWorkspaceBtn.addEventListener('click', handleDeleteWorkspace);
+        
+        // --- EXPORT LOGIC ---
+        async function generateExportImage(layout, container) {
+            const activeWs = getActiveWorkspace();
+            if (!activeWs) return;
+        
+            const exportNode = document.createElement('div');
+            exportNode.className = `p-4 font-urbanist relative ${appData.theme}`;
+            
+            let chartContainer, detailsContainer;
+            let chartWidth, chartHeight;
+        
+            if (layout === 'portrait') {
+                exportNode.style.width = '850px';
+                chartWidth = 850 - 32; 
+                chartHeight = 600; // Adjusted for A4
+                exportNode.innerHTML = `
+                    <h2 class="text-2xl font-bold text-center mb-2 font-atkinson">${activeWs.name}</h2>
+                    <div id="chart-export" style="width: ${chartWidth}px; height: ${chartHeight}px; margin: auto;"></div>
+                    <div id="details-export" class="mt-4 grid grid-cols-3 gap-2"></div>
+                `;
+            } else { // landscape
+                exportNode.style.width = '1100px';
+                chartWidth = 550;
+                chartHeight = 550;
+                exportNode.innerHTML = `
+                    <h2 class="text-2xl font-bold text-center mb-2 font-atkinson">${activeWs.name}</h2>
+                    <div class="flex gap-4 items-center">
+                        <div id="chart-export" style="width: ${chartWidth}px; height: ${chartHeight}px;"></div>
+                        <div id="details-export" class="flex-grow grid grid-cols-2 gap-2"></div>
+                    </div>
+                `;
+            }
+
+            const timestamp = new Date().toLocaleString();
+            exportNode.innerHTML += `<p class="absolute bottom-2 left-4 text-xs opacity-50">MehtaVerse</p>`;
+            exportNode.innerHTML += `<p class="absolute bottom-2 right-4 text-xs opacity-50">${timestamp}</p>`;
+        
+            document.body.appendChild(exportNode);
+            chartContainer = exportNode.querySelector('#chart-export');
+            detailsContainer = exportNode.querySelector('#details-export');
+        
+            const tempSvg = d3.select(chartContainer).append("svg").attr("width", "100%").attr("height", "100%");
+            renderChartToSVG(tempSvg, activeWs, chartWidth, chartHeight);
+        
+            activeWs.skills.forEach(skill => {
+                const category = activeWs.categories.find(c => c.id === skill.categoryId) || { name: 'N/A' };
+                detailsContainer.innerHTML += `
+                    <div class="card p-2 border text-xs rounded-lg">
+                        <div class="flex justify-between items-start">
+                           <div><h3 class="font-bold font-atkinson text-sm">${skill.name}</h3><p class="text-xs font-semibold" style="color: ${category.color};">${category.name}</p></div>
+                           <i class="${skill.icon || 'fas fa-question-circle'} text-gray-500 text-lg"></i>
+                        </div>
+                        <div class="flex justify-between items-baseline mt-1"><p class="text-gray-400">${skill.attribution || 'No attribution'}</p><span class="text-gray-400">${skill.experience || 0} yrs</span></div>
+                        <p class="mt-1 text-xs">${skill.notes || 'No notes.'}</p>
+                    </div>
+                `;
+            });
+        
+            const canvas = await html2canvas(exportNode, { scale: 2 });
+            container.innerHTML = '';
+            container.appendChild(canvas);
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.style.objectFit = 'contain';
+            document.body.removeChild(exportNode);
+            return canvas;
+        }
+
+
+        dom.exportBtn.addEventListener('click', async () => {
+            toggleModal(dom.exportModal, true);
+            
+            dom.portraitPreviewContainer.innerHTML = '<p class="text-center">Generating...</p>';
+            dom.landscapePreviewContainer.innerHTML = '<p class="text-center">Generating...</p>';
+
+            const portraitCanvas = await generateExportImage('portrait', dom.portraitPreviewContainer);
+            const landscapeCanvas = await generateExportImage('landscape', dom.landscapePreviewContainer);
+
+            dom.downloadPortraitBtn.onclick = () => {
+                const link = document.createElement('a');
+                link.download = 'skill-matrix-portrait.png';
+                link.href = portraitCanvas.toDataURL('image/png');
+                link.click();
+            };
+            dom.downloadLandscapeBtn.onclick = () => {
+                const link = document.createElement('a');
+                link.download = 'skill-matrix-landscape.png';
+                link.href = landscapeCanvas.toDataURL('image/png');
+                link.click();
+            };
+        });
+
+        // --- Icon Picker Logic ---
+        function renderIconPicker(filter = '') {
+            dom.iconList.innerHTML = '';
+            const filteredIcons = iconList.filter(icon => icon.includes(filter.toLowerCase()));
+            filteredIcons.forEach(iconClass => {
+                const iconEl = document.createElement('i');
+                iconEl.className = `${iconClass} cursor-pointer hover:text-indigo-400`;
+                iconEl.dataset.icon = iconClass;
+                dom.iconList.appendChild(iconEl);
+            });
+        }
+
+        dom.skillIconInput.addEventListener('focus', () => {
+            dom.iconPicker.style.display = 'block';
+            renderIconPicker();
+        });
+
+        dom.iconSearch.addEventListener('input', (e) => {
+            renderIconPicker(e.target.value);
+        });
+
+        dom.iconList.addEventListener('click', (e) => {
+            if (e.target.dataset.icon) {
+                dom.skillIconInput.value = e.target.dataset.icon;
+                dom.iconPicker.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (dom.managementPanel && !dom.managementPanel.contains(e.target)) {
+                dom.iconPicker.style.display = 'none';
+            }
+        });
+
+
+        // --- Resizer Logic ---
+        const leftResizer = dom.resizerLeft;
+        const rightResizer = dom.resizerRight;
+        const leftPane = dom.leftPane;
+        const rightPane = dom.rightPane;
+
+        let x = 0;
+        let leftWidth = 0;
+        let rightWidth = 0;
+
+        const leftMouseDownHandler = (e) => {
+            x = e.clientX;
+            leftWidth = leftPane.getBoundingClientRect().width;
+            document.addEventListener('mousemove', leftMouseMoveHandler);
+            document.addEventListener('mouseup', leftMouseUpHandler);
+        };
+        const leftMouseMoveHandler = (e) => {
+            const dx = e.clientX - x;
+            const newLeftWidth = leftWidth + dx;
+            leftPane.style.width = `${newLeftWidth}px`;
+        };
+        const leftMouseUpHandler = () => {
+            document.removeEventListener('mousemove', leftMouseMoveHandler);
+            document.removeEventListener('mouseup', leftMouseUpHandler);
+        };
+        leftResizer.addEventListener('mousedown', leftMouseDownHandler);
+
+        const rightMouseDownHandler = (e) => {
+            x = e.clientX;
+            rightWidth = rightPane.getBoundingClientRect().width;
+            document.addEventListener('mousemove', rightMouseMoveHandler);
+            document.addEventListener('mouseup', rightMouseUpHandler);
+        };
+        const rightMouseMoveHandler = (e) => {
+            const dx = e.clientX - x;
+            const newRightWidth = rightWidth - dx;
+            rightPane.style.width = `${newRightWidth}px`;
+        };
+        const rightMouseUpHandler = () => {
+            document.removeEventListener('mousemove', rightMouseMoveHandler);
+            document.removeEventListener('mouseup', rightMouseUpHandler);
+        };
+        rightResizer.addEventListener('mousedown', rightMouseDownHandler);
+        
+        // --- Theme Switcher ---
+        dom.settingsBtn.addEventListener('click', () => {
+            toggleModal(dom.themeModal, true);
+        });
+        
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                applyTheme(btn.dataset.theme);
+            });
+        });
+
+
+        // --- INITIALIZATION ---
+        loadData();
+        fullUIUpdate();
+        new ResizeObserver(fullUIUpdate).observe(document.getElementById('visualization-container'));
+    });
+    </script>
+</body>
+</html>
