@@ -1,3 +1,3 @@
 # mv-apps
 
-Skills Management : Manage &amp; Visualize Your Skills Data effectively.
+Skills Organizer : Manage &amp; Visualize Your Skills Data effectively.
